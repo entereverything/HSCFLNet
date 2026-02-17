@@ -94,7 +94,7 @@ def val_for_metric(model, eval_loader, criterion=None, tta=False, input_size=512
             batch_label2 = batch_label2.long().cuda()
             if criterion is not None:
                 batch_img1, batch_img2 = scale.scale_input((batch_img1, batch_img2))
-            _,_,outs = model(batch_img1, batch_img2, tta)
+            _,outs = model(batch_img1, batch_img2, tta)
             if not isinstance(outs, tuple):
                 outs = (outs, outs)
             labels = (batch_label1, batch_label2)

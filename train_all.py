@@ -28,7 +28,7 @@ def train(opt):
     model = ChangeDetection(opt).cuda()
 
     criterion = SelectLoss(opt.loss)
-    loss_Contrastive = ContrastCELoss()
+    CELoss = ContrastCELoss()
     if opt.finetune:
         params = [{"params": [param for name, param in model.named_parameters()
                               if "backbone" in name], "lr": opt.learning_rate / 10},
@@ -68,19 +68,15 @@ def train(opt):
             batch_label1 = batch_label1.long().cuda()
             batch_label2 = batch_label2.long().cuda()
             batch_img1, batch_img2 = scale.scale_input((batch_img1, batch_img2))
-            x4,sx4,outs = model(batch_img1, batch_img2)
+            x4,outs = model(batch_img1, batch_img2)
             outs = scale.scale_output(outs)
             loss = criterion(outs, (batch_label1, batch_label2)) if model.dl else criterion(outs, (batch_label1,))
 
             loss2 = 0
-            outputs = {
-            'seg':x4,
-            'embed':sx4
-                }
 
             batch_label = batch_label.unsqueeze(1)
             target_loss = F.interpolate(batch_label, size=(14,14), mode='bilinear', align_corners=True)
-            loss2 = loss_Contrastive(outputs,target_loss.cuda())
+            loss2 = CELoss(x4,target_loss.cuda())
 
             loss= loss + 0.2 * loss2
 

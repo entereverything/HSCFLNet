@@ -597,29 +597,18 @@ class ContrastCELoss(nn.Module, ABC):
         else:
             self.seg_criterion = FSCELoss()
 
-        self.contrast_criterion = PixelContrastLoss()
-
     def forward(self, preds, target, with_embed=False):
         h, w = target.size(2), target.size(3)
 
-        assert "seg" in preds
-        assert "embed" in preds
-
-        seg = preds['seg']
-        embedding = preds['embed']
+        seg = preds
 
         pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
-        loss = self.seg_criterion(pred, target)  # 19 512  1024              2  512  1024
-        # 1 2 64 64  1 64 64
-
-        _, predict = torch.max(seg, 1)
-        loss_contrast = self.contrast_criterion(embedding, target, predict)
+        loss = self.seg_criterion(pred, target)
 
         if with_embed is True:
-            return loss + self.loss_weight * loss_contrast
+            return loss
 
-        return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
-        # return loss + loss_contrast
+        return loss
 
 if __name__ == '__main__':
     pixel_loss_fun = ContrastCELoss()

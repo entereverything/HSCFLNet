@@ -34,11 +34,8 @@ class ChangeDetection(nn.Module):
         self._create_neck(opt.neck)
         self._create_heads(opt.head)
         
-        self.contrast_loss1 = Conv3Relu(512,2)
-        self.contrast_loss2 = Conv3Relu(512,512)
-
-        self.cv_kan1 = ReLUKANConv2DLayer(2,2,kernel_size=3,padding=1,dropout=0.2)
-        self.cv_kan2 = ReLUKANConv2DLayer(512,512,kernel_size=3,padding=1,dropout=0.2)
+        self.contrast_loss = Conv3Relu(512,2)
+        self.cv_kan = ReLUKANConv2DLayer(2,2,kernel_size=3,padding=1,dropout=0.2)
     
         self.CAGF1 = CAGF(64,8,False)
         self.CAGF2 = CAGF(128,8,False)
@@ -75,14 +72,12 @@ class ChangeDetection(nn.Module):
 
         change4, change = self.neck(ms_feats)
 
-        feature_map_4_1 =  self.contrast_loss1(change4)
-        feature_map_4_2 = self.contrast_loss2(change4)
-        feature_map_4_1 = self.cv_kan1(feature_map_4_1)
-        feature_map_4_2 = self.cv_kan2(feature_map_4_2)
+        feature_map_4_1 =  self.contrast_loss(change4)
+        feature_map_4_1 = self.cv_kan(feature_map_4_1)
     
         out = self.head_forward(ms_feats, change, out_size=(h_input, w_input))
 
-        return feature_map_4_1, feature_map_4_2, out
+        return feature_map_4_1, out
 
     def forward_tta(self, xa, xb):
         bs, c, h, w = xa.shape
@@ -235,7 +230,7 @@ class EnsembleModel(nn.Module):
         out1, out2 = 0, 0
         cd_pred1, cd_pred2 = None, None
         for i, model in enumerate(self.models_list):
-            _,_,outs = model(xa, xb, tta)
+            _,outs = model(xa, xb, tta)
             if not isinstance(outs, tuple):
                 outs = (outs, outs)
             outs = self.scale.scale_output(outs)
